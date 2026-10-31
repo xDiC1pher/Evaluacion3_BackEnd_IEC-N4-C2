@@ -1,0 +1,74 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<!--
+Contenedor principal del Panel Médico
+Visualiza citas agendadas y alertas de recordatorios según los requerimientos del proyecto
+-->
+<div class="row mt-4">
+    <div class="col-md-8">
+        <div class="card shadow-sm mb-4">
+            <div class="card-header bg-primary text-white">
+                <h4 class="mb-0">Calendario de Citas</h4>
+            </div>
+            <div class="card-body">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Fecha y Hora</th>
+                            <th>Mascota</th>
+                            <th>Veterinario</th>
+                            <th>Estado</th>
+                            <th>Acción</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for cita in citas %}
+                        <tr>
+                            <td>{{ cita.fecha_hora|date:"d M Y, H:i" }}</td>
+                            <td>{{ cita.mascota.nombre }}</td>
+                            <td>{{ cita.veterinario.usuario.last_name }}</td>
+                            <td>
+                                {% if cita.ficha %}
+                                    <a href="/admin/clinic/fichaclinica/{{ cita.ficha.id }}/change/" class="btn btn-sm btn-primary">Ver Ficha</a>
+                                {% else %}
+                                    <a href="/admin/clinic/fichaclinica/add/" class="btn btn-sm btn-outline-secondary">Crear Ficha</a>
+                                {% endif %}
+                            </td>
+                            <td>
+                                <button class="btn btn-sm btn-outline-primary">Ver Ficha</button>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="5" class="text-center text-muted">No hay citas registradas en el sistema.</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-4">
+        <div class="card shadow-sm border-warning">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">Alertas y Recordatorios</h5>
+            </div>
+            <ul class="list-group list-group-flush">
+                {% for recordatorio in recordatorios %}
+                <li class="list-group-item d-flex justify-content-between align-items-center">
+                    <div>
+                        <strong>{{ recordatorio.mascota.nombre }}</strong><br>
+                        <small class="text-muted">{{ recordatorio.tipo }} - {{ recordatorio.fecha_programada|date:"d M Y" }}</small>
+                    </div>
+                    <span class="badge bg-danger rounded-pill">!</span>
+                </li>
+                {% empty %}
+                <li class="list-group-item text-center text-muted">Todos los esquemas están al día.</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+</div>
+{% endblock %}
