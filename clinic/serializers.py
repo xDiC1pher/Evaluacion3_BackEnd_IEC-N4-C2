@@ -21,6 +21,10 @@ class MascotaSerializer(serializers.ModelSerializer):
 Serializador para la entidad Veterinario
 """
 class VeterinarioSerializer(serializers.ModelSerializer):
+    # Genera un nuevo campo 'nombre' leyendo el apellido del User vinculado. 
+    # Puede cambiar 'usuario.last_name' por 'usuario.username' si lo prefiere.
+    nombre = serializers.CharField(source='usuario.last_name', read_only=True)
+
     class Meta:
         model = Veterinario
         fields = '__all__'
