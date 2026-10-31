@@ -2,8 +2,10 @@
 
 {% block content %}
 <!--
+=============================================================================
 Contenedor principal del Panel Médico
 Visualiza citas agendadas y permite la creación asíncrona mediante consumo de API REST
+=============================================================================
 -->
 <div class="row mt-4">
     <div class="col-md-8">
@@ -78,7 +80,10 @@ Visualiza citas agendadas y permite la creación asíncrona mediante consumo de 
 </div>
 
 <!--
-Modal HTML de Bootstrap para capturar los datos de la nueva cita
+=============================================================================
+Modal HTML de Bootstrap para capturar los datos de la nueva cita.
+Se implementan selectores dinámicos poblados asíncronamente.
+=============================================================================
 -->
 <div class="modal fade" id="modalCrearCita" tabindex="-1">
     <div class="modal-dialog">
@@ -90,12 +95,16 @@ Modal HTML de Bootstrap para capturar los datos de la nueva cita
             <div class="modal-body">
                 <form id="formCita">
                     <div class="mb-3">
-                        <label>ID de Mascota</label>
-                        <input type="number" id="apiMascota" class="form-control" required>
+                        <label>Mascota</label>
+                        <select id="apiMascota" class="form-control" required>
+                            <option value="" disabled selected>Cargando mascotas...</option>
+                        </select>
                     </div>
                     <div class="mb-3">
-                        <label>ID de Veterinario</label>
-                        <input type="number" id="apiVeterinario" class="form-control" required>
+                        <label>Veterinario</label>
+                        <select id="apiVeterinario" class="form-control" required>
+                            <option value="" disabled selected>Cargando veterinarios...</option>
+                        </select>
                     </div>
                     <div class="mb-3">
                         <label>Fecha y Hora</label>
@@ -117,8 +126,45 @@ Modal HTML de Bootstrap para capturar los datos de la nueva cita
 
 <script>
     /*
-    Función asíncrona para recopilar datos del formulario e interactuar con la API DRF.
-    Intercepta el token CSRF de las cookies para autorizar la petición POST.
+    =============================================================================
+    CONTROLADOR ASÍNCRONO REST: Rutina de extracción de datos mediante API Fetch
+    para poblar los selectores del modal al inicializar el DOM.
+    =============================================================================
+    */
+    document.addEventListener('DOMContentLoaded', function() {
+        const mascotaSelect = document.getElementById('apiMascota');
+        const veterinarioSelect = document.getElementById('apiVeterinario');
+
+        async function poblarDropdown(url, selectElement, defaultText) {
+            try {
+                const response = await fetch(url);
+                if (!response.ok) {
+                    throw new Error(`Error HTTP: ${response.status}`);
+                }
+                const data = await response.json();
+                
+                selectElement.innerHTML = `<option value="" disabled selected>${defaultText}</option>`;
+                
+                data.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.id;
+                    option.textContent = item.nombre || item.usuario__username || `ID: ${item.id}`; 
+                    selectElement.appendChild(option);
+                });
+            } catch (error) {
+                console.error('Anomalía detectada en la sincronización de la API:', error);
+                selectElement.innerHTML = `<option value="" disabled>Error de conexión</option>`;
+            }
+        }
+
+        poblarDropdown('/api/mascotas/', mascotaSelect, 'Seleccione una mascota');
+        poblarDropdown('/api/veterinarios/', veterinarioSelect, 'Seleccione un veterinario');
+    });
+
+    /*
+    =============================================================================
+    MÉTODOS DE AUTORIZACIÓN Y ENVÍO POST
+    =============================================================================
     */
     function getCookie(name) {
         let cookieValue = null;
@@ -135,9 +181,6 @@ Modal HTML de Bootstrap para capturar los datos de la nueva cita
         return cookieValue;
     }
 
-    /*
-    Ejecuta el método POST contra el endpoint /api/citas/ y recarga la interfaz si es exitoso.
-    */
     async function consumirAPICita() {
         const payload = {
             mascota: document.getElementById('apiMascota').value,
@@ -161,7 +204,7 @@ Modal HTML de Bootstrap para capturar los datos de la nueva cita
                 alert("Cita agendada exitosamente vía API.");
                 location.reload();
             } else {
-                alert("Error al agendar la cita. Verifique los IDs.");
+                alert("Error al agendar la cita. Verifique la selección en los desplegables.");
             }
         } catch (error) {
             console.error("Falla en la comunicación con la API:", error);
