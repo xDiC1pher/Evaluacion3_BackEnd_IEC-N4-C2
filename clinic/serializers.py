@@ -21,13 +21,20 @@ class MascotaSerializer(serializers.ModelSerializer):
 Serializador para la entidad Veterinario
 """
 class VeterinarioSerializer(serializers.ModelSerializer):
-    # Genera un nuevo campo 'nombre' leyendo el apellido del User vinculado. 
-    # Puede cambiar 'usuario.last_name' por 'usuario.username' si lo prefiere.
-    nombre = serializers.CharField(source='usuario.last_name', read_only=True)
+    # Declaramos el campo 'nombre' para que sea calculado por un método interno
+    nombre = serializers.SerializerMethodField()
 
     class Meta:
         model = Veterinario
         fields = '__all__'
+
+    def get_nombre(self, obj):
+        nombre_completo = f"{obj.usuario.first_name} {obj.usuario.last_name}".strip()
+        
+        # Agregamos el prefijo "Dr/a." para mantener coherencia con la UI
+        if nombre_completo:
+            return f"Dr/a. {nombre_completo}"
+        return obj.usuario.username
 
 """
 Serializador para la entidad Cita
