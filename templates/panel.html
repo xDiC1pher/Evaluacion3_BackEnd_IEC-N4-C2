@@ -3,13 +3,16 @@
 {% block content %}
 <!--
 Contenedor principal del Panel Médico
-Visualiza citas agendadas y alertas de recordatorios según los requerimientos del proyecto
+Visualiza citas agendadas y permite la creación asíncrona mediante consumo de API REST
 -->
 <div class="row mt-4">
     <div class="col-md-8">
         <div class="card shadow-sm mb-4">
-            <div class="card-header bg-primary text-white">
+            <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
                 <h4 class="mb-0">Calendario de Citas</h4>
+                <button type="button" class="btn btn-light btn-sm" data-bs-toggle="modal" data-bs-target="#modalCrearCita">
+                    + Agendar Cita (Vía API)
+                </button>
             </div>
             <div class="card-body">
                 <table class="table table-hover">
@@ -22,21 +25,23 @@ Visualiza citas agendadas y alertas de recordatorios según los requerimientos d
                             <th>Acción</th>
                         </tr>
                     </thead>
-                    <tbody>
+                    <tbody id="tablaCitas">
                         {% for cita in citas %}
                         <tr>
-                            <td>{{ cita.fecha_hora|date:"d M Y, H:i" }}</td>
+                            <td>{{ cita.fecha_hora|date:"Y-m-d H:i" }}</td>
                             <td>{{ cita.mascota.nombre }}</td>
                             <td>{{ cita.veterinario.usuario.last_name }}</td>
+                            <td>
+                                <span class="badge {% if cita.estado == 'Pendiente' %}bg-warning{% elif cita.estado == 'Realizada' %}bg-success{% else %}bg-danger{% endif %}">
+                                    {{ cita.estado }}
+                                </span>
+                            </td>
                             <td>
                                 {% if cita.ficha %}
                                     <a href="/admin/clinic/fichaclinica/{{ cita.ficha.id }}/change/" class="btn btn-sm btn-primary">Ver Ficha</a>
                                 {% else %}
                                     <a href="/admin/clinic/fichaclinica/add/" class="btn btn-sm btn-outline-secondary">Crear Ficha</a>
                                 {% endif %}
-                            </td>
-                            <td>
-                                <button class="btn btn-sm btn-outline-primary">Ver Ficha</button>
                             </td>
                         </tr>
                         {% empty %}
@@ -71,4 +76,96 @@ Visualiza citas agendadas y alertas de recordatorios según los requerimientos d
         </div>
     </div>
 </div>
+
+<!--
+Modal HTML de Bootstrap para capturar los datos de la nueva cita
+-->
+<div class="modal fade" id="modalCrearCita" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Agendar Nueva Cita</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="formCita">
+                    <div class="mb-3">
+                        <label>ID de Mascota</label>
+                        <input type="number" id="apiMascota" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>ID de Veterinario</label>
+                        <input type="number" id="apiVeterinario" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>Fecha y Hora</label>
+                        <input type="datetime-local" id="apiFecha" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label>Motivo</label>
+                        <textarea id="apiMotivo" class="form-control" rows="2" required></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="consumirAPICita()">Guardar Cita</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    /*
+    Función asíncrona para recopilar datos del formulario e interactuar con la API DRF.
+    Intercepta el token CSRF de las cookies para autorizar la petición POST.
+    */
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    /*
+    Ejecuta el método POST contra el endpoint /api/citas/ y recarga la interfaz si es exitoso.
+    */
+    async function consumirAPICita() {
+        const payload = {
+            mascota: document.getElementById('apiMascota').value,
+            veterinario: document.getElementById('apiVeterinario').value,
+            fecha_hora: document.getElementById('apiFecha').value,
+            motivo: document.getElementById('apiMotivo').value,
+            estado: 'Pendiente'
+        };
+
+        try {
+            const response = await fetch('/api/citas/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify(payload)
+            });
+
+            if (response.ok) {
+                alert("Cita agendada exitosamente vía API.");
+                location.reload();
+            } else {
+                alert("Error al agendar la cita. Verifique los IDs.");
+            }
+        } catch (error) {
+            console.error("Falla en la comunicación con la API:", error);
+        }
+    }
+</script>
 {% endblock %}
