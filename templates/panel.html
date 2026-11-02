@@ -44,6 +44,13 @@ Visualiza citas agendadas y permite la creación asíncrona mediante consumo de 
                                 {% else %}
                                     <a href="/admin/clinic/fichaclinica/add/" class="btn btn-sm btn-outline-secondary">Crear Ficha</a>
                                 {% endif %}
+                                {% if cita.estado == 'Pendiente' %}
+                                    {% if user == cita.veterinario.usuario or user.is_superuser %}
+                                        <button class="btn btn-sm btn-success ms-1" onclick="marcarComoRealizada({{ cita.id }})">
+                                            ✔ Marcar Realizada
+                                        </button>
+                                    {% endif %}
+                                {% endif %}
                             </td>
                         </tr>
                         {% empty %}
@@ -205,6 +212,30 @@ Se implementan selectores dinámicos poblados asíncronamente.
                 location.reload();
             } else {
                 alert("Error al agendar la cita. Verifique la selección en los desplegables.");
+            }
+        } catch (error) {
+            console.error("Falla en la comunicación con la API:", error);
+        }
+    }
+    async function marcarComoRealizada(citaId) {
+        if (!confirm("¿Está seguro de que desea marcar esta cita como realizada?")) {
+            return;
+        }
+
+        try {
+            const response = await fetch(`/api/citas/${citaId}/`, {
+                method: 'PATCH',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': getCookie('csrftoken')
+                },
+                body: JSON.stringify({ estado: 'Realizada' })
+            });
+
+            if (response.ok) {
+                location.reload(); 
+            } else {
+                alert("Error al actualizar la cita. Verifique el endpoint de la API.");
             }
         } catch (error) {
             console.error("Falla en la comunicación con la API:", error);
